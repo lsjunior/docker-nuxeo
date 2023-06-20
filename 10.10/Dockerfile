@@ -1,6 +1,7 @@
 # vim:set ft=dockerfile:
-FROM       openjdk:8-jdk
+FROM       eclipse-temurin:8u345-b01-jdk-jammy
 MAINTAINER Nuxeo <packagers@nuxeo.com>
+
 
 # Add needed convert tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -9,7 +10,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pwgen \
     imagemagick \
     ffmpeg2theora \
-    ufraw \
     poppler-utils \
     libwpd-tools \
     exiftool \
@@ -17,8 +17,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libreoffice \
     ffmpeg \
     x264 \
- && rm -rf /var/lib/apt/lists/*
+    unzip
 
+# UFRaw
+#RUN apt-get update && apt-get install -y software-properties-common && add-apt-repository ppa:crass/ufraw
 
 # Remove setuid/setgid binaries from images for security
 RUN find / -perm 6000 -type f -exec chmod a-s {} \; || true
@@ -26,17 +28,21 @@ RUN find / -perm 6000 -type f -exec chmod a-s {} \; || true
 ENV NUXEO_USER nuxeo
 ENV NUXEO_HOME /opt/nuxeo/server
 ENV HOME /opt/nuxeo/server
-ARG NUXEO_VERSION=10.10
-ARG NUXEO_DIST_URL=http://community.nuxeo.com/static/releases/nuxeo-10.10/nuxeo-server-10.10-tomcat.zip
-ARG NUXEO_MD5=90ef2ac005020e880b6277510800c30c
+ARG NUXEO_VERSION=10.10-HF64
+#ARG NUXEO_DIST_URL=http://community.nuxeo.com/static/releases/nuxeo-10.10/nuxeo-server-10.10-tomcat.zip
+#ARG NUXEO_MD5=90ef2ac005020e880b6277510800c30c
+ARG NUXEO_ZIP_FILE=nuxeo-server-tomcat-10.10-HF72.zip
+ARG NUXEO_MD5=1593d0d339ddb6b60f12ffc54abab563
 
 
 # Create Nuxeo user
 RUN useradd -m -d /home/$NUXEO_USER -u 1000 -s /bin/bash $NUXEO_USER
 
 # Add distribution
-RUN curl -fsSL "${NUXEO_DIST_URL}" -o /tmp/nuxeo-distribution-tomcat.zip \
-    && if [ $NUXEO_VERSION != "master" ]; then echo "$NUXEO_MD5 /tmp/nuxeo-distribution-tomcat.zip" | md5sum -c -; fi \
+#RUN curl -fsSL "${NUXEO_DIST_URL}" -o /tmp/nuxeo-distribution-tomcat.zip \
+#    && if [ $NUXEO_VERSION != "master" ]; then echo "$NUXEO_MD5 /tmp/nuxeo-distribution-tomcat.zip" | md5sum -c -; fi \
+COPY $NUXEO_ZIP_FILE /tmp/nuxeo-distribution-tomcat.zip
+RUN if [ $NUXEO_VERSION != "master" ]; then echo "$NUXEO_MD5 /tmp/nuxeo-distribution-tomcat.zip" | md5sum -c -; fi \
     && mkdir -p /tmp/nuxeo-distribution $(dirname $NUXEO_HOME) \
     && unzip -q -d /tmp/nuxeo-distribution /tmp/nuxeo-distribution-tomcat.zip \
     && DISTDIR=$(/bin/ls /tmp/nuxeo-distribution | head -n 1) \
